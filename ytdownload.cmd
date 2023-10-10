@@ -3,3 +3,5 @@
 cd %cd%
 
 node index
+
+pause
