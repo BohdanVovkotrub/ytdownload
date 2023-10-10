@@ -1,5 +1,4 @@
 import { exec } from 'child_process';
-import EventEmitter from "events";
 import readline from 'readline';
 
 
@@ -17,7 +16,7 @@ export default class YtDownloader {
     this.defaultDownloadPath = process.env.DEFAULT_DOWNLOAD_PATH || "";
 
     this.reading =  readline.createInterface({ input: process.stdin, output: process.stdout });
-    this.emitter = new EventEmitter();
+    
     this.from = null;
     this.to = null;
   };
