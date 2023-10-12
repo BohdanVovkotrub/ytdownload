@@ -9,6 +9,8 @@ export default class YtDownloader {
   links;
   format;
   outputFilename;
+  vcodec;
+  acodec;
 
   constructor() {
     this.ytdlp = process.env.YTDLP_PATH || "yt-dlp";
@@ -47,6 +49,22 @@ export default class YtDownloader {
     return {from: this.from, to: this.to};
   };
 
+  inputVCodec = async () => {
+    const defaultVCodec = `copy`;
+    const questionHeader = `Video codec (copy, libx264, h264_nvenc etc.) [${defaultVCodec}]: `;
+    const input = await new Promise(resolve => this.reading.question(questionHeader, data => resolve(data.trim())));
+    this.vcodec = input === '' ? defaultVCodec : input;
+    return this.vcodec;
+  };
+  
+  inputACodec = async () => {
+    const defaultACodec = `copy`;
+    const questionHeader = `Audio codec (copy, aac, ac3 etc.) [${defaultACodec}]: `;
+    const input = await new Promise(resolve => this.reading.question(questionHeader, data => resolve(data.trim())));
+    this.acodec = input === '' ? defaultACodec : input;
+    return this.acodec;
+  };
+  
   inputOutputFilename = async () => {
     const regex = /[^a-zа-яёії_ -]/ig;
     const defaultFilename = `${this.title.replace(regex, '')}.mp4`;
@@ -72,7 +90,7 @@ export default class YtDownloader {
 
   getInfo = async () => {
     const info = await new Promise((resolve, reject) => {
-      const command = `${this.ytdlp} "${this.URL}" --encoding "utf-8" --print %(.{formats_table,duration_string,title,fulltitle})+j`;
+      const command = `${this.ytdlp} "${this.URL}" --encoding "utf-8" --print %(.{formats_table,duration_string,title,fulltitle,is_live,live_status})+j`;
       console.log(command)
       const running = exec(command);
       let result = ``
@@ -81,23 +99,29 @@ export default class YtDownloader {
       running.on('error', reject);
     });
 
-    const { formats_table, duration_string, title, fulltitle } = info;
+    const { formats_table, duration_string, title, fulltitle, is_live, live_status } = info;
 
     this.duration = this.formatDuration(duration_string);
     this.formats_table = formats_table;
     this.title = title;
     this.fulltitle = fulltitle;
+    this.is_live = is_live;
+    this.live_status = live_status;
 
     console.log(`\nFORMATS:\n`, this.formats_table);
     console.log(`\nTitle:`, this.title);
     console.log(`\nFull title:`, this.fulltitle);
     console.log(`\nDuration:`, this.duration, '\n');
+    console.log(`\Is Live:`, this.is_live, '\n');
+    console.log(`\Live status:`, this.live_status, '\n');
 
     return {
       duration: this.duration, 
       formats_table: this.formats_table,
       title: this.title,
       fulltitle: this.fulltitle,
+      is_live: this.is_live,
+	    live_status: this.live_status,
     };
   };
 
@@ -125,7 +149,8 @@ export default class YtDownloader {
       const from = this.from ? `-ss ${this.from}`: '';
       const to = this.to ? `-to ${this.to}`: '';
       const input = this.links.map(link => `${from} ${to} -i "${link}"`.trim());
-      const command = `${this.ffmpeg} ${input.join(' ')} -c copy -y "${this.downloadTo}\\${this.outputFilename}"`;
+      const separatorDownloadTo = this.downloadTo !== '' ? '\\' : '';
+      const command = `${this.ffmpeg} ${input.join(' ')} -vcodec ${this.vcodec} -acodec ${this.acodec} -y "${this.downloadTo}${separatorDownloadTo}${this.outputFilename}"`;
       console.log(command);
       const running = exec(command);
       running.on('close', resolve);
@@ -139,6 +164,8 @@ export default class YtDownloader {
     await this.inputUrl();
     await this.getInfo();
     await this.inputFormat();
+    await this.inputVCodec();
+    await this.inputACodec();
     const links = await this.getDownloadLinks();
     if (!links) throw new Error(`Cannot parse links`);
     await this.inputFromTo();
