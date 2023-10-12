@@ -1,4 +1,4 @@
-Download cuted video from YouTube using YT-DLP and FFMPEG
+Download cropped video from YouTube using YT-DLP and FFMPEG
 
 0. FFMPEG and YT-DLP required. Please, install its.
 1. Unzip this archive
